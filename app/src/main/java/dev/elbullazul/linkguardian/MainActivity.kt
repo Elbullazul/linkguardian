@@ -24,6 +24,12 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.elbullazul.linkguardian.ui.theme.LinkGuardianTheme
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okio.IOException
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +47,43 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+fun pingUrl(url: String) {
+    val client = OkHttpClient()
+    val request = Request.Builder()
+        .url("https://publicobject.com/helloworld.txt")
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            e.printStackTrace()
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            response.use {
+                if (!response.isSuccessful) throw IOException("Unexpected code $response")
+
+                for ((name, value) in response.headers) {
+                    println("$name: $value")
+                }
+
+                println(response.body!!.string())
+            }
+        }
+    })
+}
+
+fun OnLoginClick(context: Context, serverUrl: String, apiToken: String) {
+    val sharedPref = context.getSharedPreferences(PREFERENCES_KEY_FILE, Context.MODE_PRIVATE) ?: return
+
+    with(sharedPref.edit()) {
+        putString(dev.elbullazul.linkguardian.PREF_SERVER_URL, serverUrl)
+        putString(dev.elbullazul.linkguardian.PREF_API_TOKEN, apiToken)
+        apply()
+
+        pingUrl(serverUrl)
+    }
+}
+
 @Composable
 fun LoginFragment(modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -53,45 +96,42 @@ fun LoginFragment(modifier: Modifier = Modifier) {
 
     if (!savedUrl.isNullOrEmpty() && savedToken.isNullOrEmpty()) {
         ShowToast(context, savedUrl)
-
-        // TODO: login
     }
-//    else {
-        // TODO: move to separate class
-        Column(
-            modifier = Modifier.padding(horizontal = 15.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = stringResource(id = R.string.app_name),
-                modifier = modifier
-            )
-            TextField(
-                value = serverUrl.value,
-                onValueChange = { serverUrl.value = it },
-                label = { Text(stringResource(id = R.string.server_url)) }
-            )
-            TextField(
-                value = apiToken.value,
-                onValueChange = { apiToken.value = it },
-                label = { Text(stringResource(id = R.string.api_token)) }
-            )
-            Button(
-                onClick = {
-                    // TODO: attempt to login
+    else
+        ShowToast(context, "savedPrefs is absolutely broken")
 
-                    with(sharedPref.edit()) {
-                        putString(PREF_SERVER_URL, serverUrl.value.text)
-                        putString(PREF_API_TOKEN, apiToken.value.text)
-                        apply()
-                    }
-                }
-            ) {
-                Text(stringResource(id = R.string.login))
+    // TODO: move to its own class file
+    Column(
+        modifier = Modifier.padding(horizontal = 15.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = stringResource(id = R.string.app_name),
+            modifier = modifier
+        )
+        TextField(
+            value = serverUrl.value,
+            onValueChange = { serverUrl.value = it },
+            label = { Text(stringResource(id = R.string.server_url)) }
+        )
+        TextField(
+            value = apiToken.value,
+            onValueChange = { apiToken.value = it },
+            label = { Text(stringResource(id = R.string.api_token)) }
+        )
+        Button(
+            onClick = {
+                OnLoginClick(
+                    context = context,
+                    serverUrl = serverUrl.value.text,
+                    apiToken = apiToken.value.text
+                )
             }
+        ) {
+            Text(stringResource(id = R.string.login))
         }
-//    }
+    }
 }
 
 @Preview(showBackground = true)
