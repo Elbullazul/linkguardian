@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import dev.elbullazul.linkguardian.fragments.LoginFragment
-import dev.elbullazul.linkguardian.http.pingUrl
 import dev.elbullazul.linkguardian.ui.theme.LinkGuardianTheme
 
 class MainActivity : ComponentActivity() {
@@ -42,34 +41,18 @@ fun InitContainer(modifier: Modifier = Modifier) {
     val savedUrl = sharedPref.getString(PREF_SERVER_URL, EMPTY_STRING)
     val savedToken = sharedPref.getString(PREF_API_TOKEN, EMPTY_STRING)
 
-    // TODO: reenable once app is stable
+    // TODO: re-enable once app is stable
 //    if (!savedUrl.isNullOrEmpty() && !savedToken.isNullOrEmpty()) {
 //        ShowToast(context, savedUrl + savedToken)
 //
 //        // TODO: load complete application
 //    }
 //    else {
-        LoginFragment(
-            modifier = modifier,
-            authenticate = { serverUrl: String, apiToken: String ->
-                OnLoginClick(context, serverUrl, apiToken)
-            }
-        )
+    LoginFragment(
+        modifier = modifier,
+        context = context
+    )
 //    }
-}
-
-fun OnLoginClick(context: Context, serverUrl: String, apiToken: String) {
-    val sharedPref = context.getSharedPreferences(PREFERENCES_KEY_FILE, Context.MODE_PRIVATE) ?: return
-
-    with(sharedPref.edit()) {
-        putString(PREF_SERVER_URL, serverUrl)
-        putString(PREF_API_TOKEN, apiToken)
-        apply()
-
-        pingUrl(serverUrl)
-
-        ShowToast(context, "Success!")
-    }
 }
 
 @Preview(showBackground = true)

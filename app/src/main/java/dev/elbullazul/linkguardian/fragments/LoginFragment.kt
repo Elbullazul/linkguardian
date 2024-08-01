@@ -15,17 +15,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import dev.elbullazul.linkguardian.PREFERENCES_KEY_FILE
+import dev.elbullazul.linkguardian.PREF_API_TOKEN
+import dev.elbullazul.linkguardian.PREF_SERVER_URL
 import dev.elbullazul.linkguardian.R
+import dev.elbullazul.linkguardian.ShowToast
+import dev.elbullazul.linkguardian.http.ping
 
 @Composable
-fun LoginFragment(authenticate: (String, String) -> Unit, modifier: Modifier = Modifier) {
-    val serverUrl = remember { mutableStateOf(TextFieldValue("")) }
-    val apiToken = remember { mutableStateOf(TextFieldValue("")) }
+fun LoginFragment(context: Context, modifier: Modifier = Modifier) {
+    val serverUrl = remember { mutableStateOf("") }
+    val apiToken = remember { mutableStateOf("") }
 
     Column(
-        modifier = modifier.padding(horizontal = 15.dp, vertical = 20.dp).fillMaxWidth().fillMaxHeight(),
+        modifier = modifier
+            .padding(horizontal = 15.dp, vertical = 20.dp)
+            .fillMaxWidth()
+            .fillMaxHeight(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -43,13 +50,44 @@ fun LoginFragment(authenticate: (String, String) -> Unit, modifier: Modifier = M
             onValueChange = { apiToken.value = it },
             label = { Text(stringResource(id = R.string.api_token)) }
         )
-        Button(
-            // TODO: check that URL is valid and token isn't empty!
-            onClick = {
-                authenticate(serverUrl.value.text, apiToken.value.text)
+        LoginButton(
+            context = context,
+            serverUrl = serverUrl.value,
+            apiToken = apiToken.value
+        )
+    }
+}
+
+@Composable
+fun LoginButton(context: Context, serverUrl: String, apiToken: String) {
+    val successMsg = stringResource(id = R.string.login)
+    val errorMsg = stringResource(id = R.string.err_server_unreachable)
+
+    Button(
+        onClick = {
+            // TODO: test token validity
+            if (ping(serverUrl)) {
+                persistUserData(context, serverUrl, apiToken)
+
+                ShowToast(context, successMsg)
+
+                // TODO: navigate to dashboard view
             }
-        ) {
-            Text(stringResource(id = R.string.login))
+            else {
+                ShowToast(context, errorMsg)
+            }
         }
+    ) {
+        Text(stringResource(id = R.string.login))
+    }
+}
+
+fun persistUserData(context: Context, serverUrl: String, apiToken: String) {
+    val sharedPref = context.getSharedPreferences(PREFERENCES_KEY_FILE, Context.MODE_PRIVATE) ?: return
+
+    with(sharedPref.edit()) {
+        putString(PREF_SERVER_URL, serverUrl)
+        putString(PREF_API_TOKEN, apiToken)
+        apply()
     }
 }

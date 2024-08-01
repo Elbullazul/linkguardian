@@ -4,57 +4,94 @@ import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
 
-fun pingUrl(url: String) {
+@Throws(okio.IOException::class)
+fun get(url: String, requiresAuth: Boolean = false): String {
     val client = OkHttpClient()
-    val request = Request.Builder()
-        .url(url)
-        .build()
+    var responseBody = ""
 
-    client.newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: IOException) {
-            e.printStackTrace()
-        }
+    val request = if (requiresAuth) {
+        val token = ""      // TODO: load token
 
-        override fun onResponse(call: Call, response: Response) {
-            response.use {
-                if (!response.isSuccessful) throw IOException("Unexpected code $response")
+        Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $token")
+            .build()
+    } else {
+        Request.Builder()
+            .url(url)
+            .build()
+    }
 
-                for ((name, value) in response.headers) {
-                    println("$name: $value")
-                }
-
-                println(response.body!!.string())
+    client.newCall(request).enqueue(
+        object : Callback {
+            override fun onFailure(
+                call: Call,
+                e: IOException,
+            ) {
+                e.printStackTrace()
             }
-        }
-    })
+
+            override fun onResponse(
+                call: Call,
+                response: Response,
+            ) {
+                response.use {
+                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
+
+                    responseBody = response.body!!.string()
+                }
+            }
+        },
+    )
+
+    return responseBody
 }
 
-fun ApiCall(endpoint: String, token: String) {
+// mostly the same as get, except for the .post() call
+@Throws(okio.IOException::class)
+fun post(url: String, body: String, requiresAuth: Boolean = false) {
     val client = OkHttpClient()
-    val request = Request.Builder()
-        .url(endpoint)
-        .header("Authorization", "Bearer $token")
-        .build()
 
-    client.newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: IOException) {
-            e.printStackTrace()
-        }
+    val request = if (requiresAuth) {
+        val token = ""      // TODO: load token
 
-        override fun onResponse(call: Call, response: Response) {
-            response.use {
-                if (!response.isSuccessful) throw IOException("Unexpected code $response")
+        Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $token")
+            .post(body.toRequestBody())
+            .build()
+    } else {
+        Request.Builder()
+            .url(url)
+            .post(body.toRequestBody())
+            .build()
+    }
 
-                for ((name, value) in response.headers) {
-                    println("$name: $value")
-                }
+    client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) throw IOException("Unexpected code $response")
 
-                // TODO: parse content (JSON)
-                println(response.body!!.string())
-            }
-        }
-    })
+        println(response.body!!.string())
+    }
+}
+
+fun ping(url: String): Boolean {
+    try {
+        get(url)
+    } catch (e: IOException) {
+        println("IO error: no internet?")
+        return false;
+    } catch (e: IllegalArgumentException) {
+        println("Invalid URL")
+        return false;
+    } catch (e: Exception) {
+        print(e.toString())
+        println(e.message)
+        return false;
+    }
+
+    return true;
 }
