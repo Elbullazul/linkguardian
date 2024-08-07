@@ -21,7 +21,7 @@ import dev.elbullazul.linkguardian.PREF_API_TOKEN
 import dev.elbullazul.linkguardian.PREF_SERVER_URL
 import dev.elbullazul.linkguardian.R
 import dev.elbullazul.linkguardian.ShowToast
-import dev.elbullazul.linkguardian.http.ping
+import dev.elbullazul.linkguardian.http.LinkWardenAPI
 
 @Composable
 fun LoginFragment(context: Context, modifier: Modifier = Modifier) {
@@ -60,21 +60,36 @@ fun LoginFragment(context: Context, modifier: Modifier = Modifier) {
 
 @Composable
 fun LoginButton(context: Context, serverUrl: String, apiToken: String) {
-    val successMsg = stringResource(id = R.string.login)
-    val errorMsg = stringResource(id = R.string.err_server_unreachable)
+    val unreachableMsg = stringResource(id = R.string.server_unreachable)
+    val invalidTokenMsg = stringResource(id = R.string.could_not_authenticate)
 
     Button(
         onClick = {
-            // TODO: test token validity
-            if (ping(serverUrl)) {
-                persistUserData(context, serverUrl, apiToken)
+            val wrapper = LinkWardenAPI(context, serverUrl, apiToken)
 
-                ShowToast(context, successMsg)
+            if (wrapper.serverReachable()) {
+                val response = wrapper.dashboardData()
 
-                // TODO: navigate to dashboard view
+
+
+                println(response.message)
+                println(response.code)
+
+                if (response.isSuccessful) {
+                    println(wrapper.dashboardData().message)
+
+                    println("Congratulations, mister **** star!")
+
+                    persistUserData(context, serverUrl, apiToken)
+
+                    // TODO: navigate to dashboard view
+                }
+                else {
+                    ShowToast(context, invalidTokenMsg)
+                }
             }
             else {
-                ShowToast(context, errorMsg)
+                ShowToast(context, unreachableMsg)
             }
         }
     ) {

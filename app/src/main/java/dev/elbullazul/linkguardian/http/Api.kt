@@ -1,97 +1,61 @@
 package dev.elbullazul.linkguardian.http
 
-import okhttp3.Call
-import okhttp3.Callback
+import android.content.Context
+import dev.elbullazul.linkguardian.R
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
 
-@Throws(okio.IOException::class)
-fun get(url: String, requiresAuth: Boolean = false): String {
-    val client = OkHttpClient()
-    var responseBody = ""
+class LinkWardenAPI(
+    private val context: Context,
+    private val url: String,
+    private val token: String,
+    private val client: OkHttpClient = OkHttpClient()
+) {
+    fun serverReachable(): Boolean {
+        val future = ResponseFuture()
 
-    val request = if (requiresAuth) {
-        val token = ""      // TODO: load token
+        try {
+            val request = Request.Builder()
+                .url(url)
+                .build()
 
-        Request.Builder()
-            .url(url)
-            .header("Authorization", "Bearer $token")
-            .build()
-    } else {
-        Request.Builder()
-            .url(url)
-            .build()
+            client.newCall(request).enqueue(future)
+
+            return future.get().isSuccessful
+        } catch (e: IllegalArgumentException) {
+            println(e.message)
+            return false;
+        } catch (e: IOException) {
+            println("IO error: no internet?")
+            return false;
+        } catch (e: Exception) {
+            println(e.message)
+            return false;
+        }
     }
 
-    client.newCall(request).enqueue(
-        object : Callback {
-            override fun onFailure(
-                call: Call,
-                e: IOException,
-            ) {
-                e.printStackTrace()
-            }
+    fun dashboardData(): Response {
+        try {
+            val testUrl = context.getString(R.string.api_v1_dashboard, url)
+            println(testUrl)
 
-            override fun onResponse(
-                call: Call,
-                response: Response,
-            ) {
-                response.use {
-                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
+            val future = ResponseFuture()
+            val request = Request.Builder()
+                .url(testUrl)
+                .header("Authorization", "Bearer $token")
+                .build()
 
-                    responseBody = response.body!!.string()
-                }
-            }
-        },
-    )
+            client.newCall(request).enqueue(future)
 
-    return responseBody
-}
+            val response = future.get()
 
-// mostly the same as get, except for the .post() call
-@Throws(okio.IOException::class)
-fun post(url: String, body: String, requiresAuth: Boolean = false) {
-    val client = OkHttpClient()
-
-    val request = if (requiresAuth) {
-        val token = ""      // TODO: load token
-
-        Request.Builder()
-            .url(url)
-            .header("Authorization", "Bearer $token")
-            .post(body.toRequestBody())
-            .build()
-    } else {
-        Request.Builder()
-            .url(url)
-            .post(body.toRequestBody())
-            .build()
+            return response
+        }
+        catch (e: Exception) {
+            println(e.message)
+            return Response.Builder().build()
+        }
     }
-
-    client.newCall(request).execute().use { response ->
-        if (!response.isSuccessful) throw IOException("Unexpected code $response")
-
-        println(response.body!!.string())
-    }
-}
-
-fun ping(url: String): Boolean {
-    try {
-        get(url)
-    } catch (e: IOException) {
-        println("IO error: no internet?")
-        return false;
-    } catch (e: IllegalArgumentException) {
-        println("Invalid URL")
-        return false;
-    } catch (e: Exception) {
-        print(e.toString())
-        println(e.message)
-        return false;
-    }
-
-    return true;
 }
