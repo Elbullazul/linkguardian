@@ -1,4 +1,8 @@
-# LinkGuardian
+# This project is discontinued. Use the [official app](https://github.com/linkwarden/builds) instead
+
+---
+
+### LinkGuardian
 An Android client for [Linkwarden](https://github.com/linkwarden/linkwarden). Built with Kotlin and Jetpack compose.
 
 <a href="https://apt.izzysoft.de/fdroid/index/apk/dev.elbullazul.linkguardian"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Download from IzzyOnDroid" width="200" height="80"/></a>
